@@ -9,7 +9,8 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -22,34 +23,21 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        http.authorizeHttpRequests(requests -> requests.anyRequest().authenticated());
-        http.formLogin(Customizer.withDefaults());
-        http.httpBasic(Customizer.withDefaults());
+        http.csrf(AbstractHttpConfigurer::disable) // Disable CSRF protection
+                .authorizeHttpRequests(requests -> requests
+                        .requestMatchers("/register", "/users").permitAll() // Allow unauthenticated access to /register
+                        .anyRequest().authenticated()) // Authenticate all other requests
+                .httpBasic(Customizer.withDefaults())
+                .formLogin(Customizer.withDefaults());
+
         return http.build();
     }
 
     @Bean
-    public AuthenticationProvider authenticationProvider(){
+    public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setPasswordEncoder(NoOpPasswordEncoder.getInstance());
+        provider.setPasswordEncoder(new BCryptPasswordEncoder(10));
         provider.setUserDetailsService(userDetailsService);
         return provider;
     }
-
-    /*@Bean
-    public UserDetailsService userDetailsService() {
-        UserDetails tomCruise = User.withDefaultPasswordEncoder()
-            .username("TomCruise")
-            .password("tom62")
-            .roles("USER")
-            .build();
-
-        UserDetails shakibKhan = User.withDefaultPasswordEncoder()
-                .username("ShakibKhan")
-                .password("shakib45")
-                .roles("ADMIN")
-                .build();
-
-        return new InMemoryUserDetailsManager(tomCruise, shakibKhan);
-    }*/
 }
